@@ -7,9 +7,14 @@ import { generateLevel, TOTAL_LEVELS } from './utils/levels';
 import type { Level } from './utils/levels';
 import type { Grid, Position } from './types/game';
 
+interface User {
+  id: string;
+  username: string;
+}
+
 function App() {
   console.log("App rendering...");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [grid, setGrid] = useState<Grid>([]);
   const [selectedPos, setSelectedPos] = useState<Position | null>(null);
@@ -17,6 +22,7 @@ function App() {
   const [level, setLevel] = useState<Level>(generateLevel(1));
   const [movesLeft, setMovesLeft] = useState(level.moves);
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const startLevel = useCallback((levelId: number) => {
     const newLevel = generateLevel(levelId);
@@ -29,7 +35,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+      // eslint-disable-next-line
       startLevel(1);
     }
   }, [user, startLevel]);
@@ -41,7 +47,7 @@ function App() {
 
 
   const handleCandyClick = (pos: Position) => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || isProcessing) return;
 
     if (!selectedPos) {
       setSelectedPos(pos);
@@ -65,7 +71,7 @@ function App() {
   };
 
   const handleCandySwipe = (from: Position, to: Position) => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || isProcessing) return;
 
     // Check bounds
     if (to.row < 0 || to.row >= 8 || to.col < 0 || to.col >= 8) return;
@@ -75,6 +81,7 @@ function App() {
   };
 
   const swapCandies = (pos1: Position, pos2: Position) => {
+    setIsProcessing(true);
     const newGrid = [...grid.map(row => [...row])];
     const temp = newGrid[pos1.row][pos1.col];
     newGrid[pos1.row][pos1.col] = newGrid[pos2.row][pos2.col];
@@ -91,6 +98,7 @@ function App() {
         // Ideally swap back here if no match
         // For simplicity, we count it as a move even if no match (or implement swap back)
         checkGameStatus(score, movesLeft - 1);
+        setIsProcessing(false);
       }
     }, 300);
   };
@@ -140,6 +148,7 @@ function App() {
         removeMatches(newGrid, matches, currentScore); // Pass accumulated score again
       } else {
         checkGameStatus(currentScore, movesLeft - 1); // Moves don't decrease on cascade, but we check win condition
+        setIsProcessing(false);
       }
     }, 300);
   };
